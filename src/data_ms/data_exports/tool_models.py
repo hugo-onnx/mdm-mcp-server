@@ -20,13 +20,13 @@ class CreateDataExportRequest(BaseModel):
     """
     Request model for create_data_export tool.
     
-    HARDCODED for entity exports - search_criteria is built internally.
-    file_name is optional in the API, so we omit it entirely.
+    Supports both entity exports (creditentity) and record exports (creditrecord).
+    The search_criteria is built internally based on export_type.
     """
     
-    entity_type: str = Field(
-        default="creditentity",
-        description="Entity type to export (e.g., 'creditentity')"
+    export_type: str = Field(
+        default="entity",
+        description="Type of export: 'entity' for creditentity (golden records), 'record' for creditrecord (source records)"
     )
     
     file_format: str = Field(
