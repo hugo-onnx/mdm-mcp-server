@@ -35,37 +35,54 @@ class DataExportService(BaseService):
     
     def _build_hardcoded_payload(
         self,
-        entity_type: str,
+        export_type: str,
         file_format: str
     ) -> Dict[str, Any]:
         """
-        Build the HARDCODED request body for entity export.
+        Build the request body for entity or record export.
         
-        NOTE: 
-        - compression_type is a QUERY parameter, not in the body
-        - file_name is optional, so we omit it (API will generate one)
+        Args:
+            export_type: "entity" for creditentity, "record" for creditrecord
+            file_format: csv, tsv, psv, or json
         
-        API expects:
+        For entity export:
         {
             "export_type": "entity",
             "format": "csv",
             "search_criteria": {
                 "search_type": "entity",
-                "query": {
-                    "operation": "and",
-                    "expressions": [{"value": "*"}]
-                },
-                "filters": [
-                    {"type": "entity", "values": ["creditentity"]}
-                ]
+                "query": {"operation": "and", "expressions": [{"value": "*"}]},
+                "filters": [{"type": "entity", "values": ["creditentity"]}]
+            }
+        }
+        
+        For record export:
+        {
+            "export_type": "record",
+            "format": "csv",
+            "search_criteria": {
+                "search_type": "record",
+                "query": {"operation": "and", "expressions": [{"value": "*"}]},
+                "filters": [{"type": "record", "values": ["creditrecord"]}]
             }
         }
         """
+        # Determine search_type and filter based on export_type
+        if export_type == "record":
+            search_type = "record"
+            filter_type = "record"
+            filter_value = "creditrecord"
+        else:
+            # Default to entity
+            search_type = "entity"
+            filter_type = "entity"
+            filter_value = "creditentity"
+        
         payload = {
-            "export_type": "entity",
+            "export_type": export_type,
             "format": file_format,
             "search_criteria": {
-                "search_type": "entity",
+                "search_type": search_type,
                 "query": {
                     "operation": "and",
                     "expressions": [
@@ -76,9 +93,9 @@ class DataExportService(BaseService):
                 },
                 "filters": [
                     {
-                        "type": "entity",
+                        "type": filter_type,
                         "values": [
-                            entity_type
+                            filter_value
                         ]
                     }
                 ]
@@ -90,17 +107,17 @@ class DataExportService(BaseService):
     def create_export(
         self,
         ctx: Context,
-        entity_type: str = "creditentity",
+        export_type: str = "entity",
         file_format: str = "csv",
         compression_type: str = "zip",
         crn: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Create a new data export job with HARDCODED search criteria.
+        Create a new data export job.
         
         Args:
             ctx: MCP Context object for session tracking
-            entity_type: Entity type to export (default: creditentity)
+            export_type: "entity" for creditentity, "record" for creditrecord
             file_format: Export file format (csv, tsv, psv, json)
             compression_type: Compression type (zip, tar, tgz) - sent as query param
             crn: Optional CRN (uses default if None)
@@ -113,14 +130,31 @@ class DataExportService(BaseService):
                 ctx, crn, check_preconditions=False
             )
             
+            # Log raw input values for debugging
+            self.logger.info(f"Raw input - export_type: '{export_type}' (type: {type(export_type).__name__})")
+            self.logger.info(f"Raw input - file_format: '{file_format}' (type: {type(file_format).__name__})")
+            self.logger.info(f"Raw input - compression_type: '{compression_type}' (type: {type(compression_type).__name__})")
+            
+            # Validate and normalize export_type
+            if export_type is None or str(export_type).strip() == "":
+                export_type = "entity"
+                self.logger.info("export_type was empty, defaulting to 'entity'")
+            else:
+                export_type = str(export_type).strip().lower()
+            
+            # Ensure valid export_type
+            if export_type not in ("entity", "record"):
+                self.logger.warning(f"Invalid export_type '{export_type}', defaulting to 'entity'")
+                export_type = "entity"
+            
             self.logger.info(
-                f"Creating export job for entity type '{entity_type}', "
+                f"Creating export job for export_type '{export_type}', "
                 f"tenant: {tenant_id}, session: {session_id}"
             )
             
-            # Build the hardcoded payload (body)
+            # Build the payload (body)
             request_body = self._build_hardcoded_payload(
-                entity_type=entity_type,
+                export_type=export_type,
                 file_format=file_format
             )
             
