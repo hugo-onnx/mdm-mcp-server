@@ -46,13 +46,13 @@ def create_data_export(
     """
     Creates a new data export job in IBM MDM.
     
-    HARDCODED for entity exports. The search_criteria is built internally
-    with the structure that works with the MDM API.
+    Supports both entity exports (creditentity/golden records) and 
+    record exports (creditrecord/source records).
     
     Args:
         ctx: MCP Context object (automatically injected)
         request: CreateDataExportRequest containing:
-            - entity_type: Entity type to export (default: "creditentity")
+            - export_type: "entity" (default) for creditentity, "record" for creditrecord
             - file_format: "csv" (default), "tsv", "psv", or "json"
             - compression_type: "zip" (default), "tar", or "tgz"
             - crn: Cloud Resource Name (optional)
@@ -60,18 +60,18 @@ def create_data_export(
     Returns:
         ExportJobResponse with job_id and status, or DataExportErrorResponse on error.
     
-    Example:
-        create_data_export(
-            request=CreateDataExportRequest(
-                entity_type="creditentity"
-            )
-        )
+    Examples:
+        Export creditentity (golden records):
+            create_data_export(request=CreateDataExportRequest(export_type="entity"))
+        
+        Export creditrecord (source records):
+            create_data_export(request=CreateDataExportRequest(export_type="record"))
     """
     service = get_export_service()
     
     result = service.create_export(
         ctx=ctx,
-        entity_type=request.entity_type,
+        export_type=request.export_type,
         file_format=request.file_format,
         compression_type=request.compression_type,
         crn=request.crn
