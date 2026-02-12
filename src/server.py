@@ -27,6 +27,7 @@ from data_ms.records.tools import get_record_by_id, get_records_entities_by_reco
 from data_ms.entities.tools import get_entity
 from data_ms.data_exports.tools import create_data_export, get_data_export, download_data_export
 from model_ms.model.tools import get_data_model
+from model_ms.algorithms.tools import get_matching_algorithm
 
 # Load environment variables
 load_dotenv()
@@ -49,6 +50,7 @@ logger.info(f"Registering tools in '{TOOLS_MODE}' mode")
 # Register core tools (always available)
 mcp.add_tool(Tool.from_function(search_master_data, name="search_master_data"))
 mcp.add_tool(Tool.from_function(get_data_model, name="get_data_model"))
+mcp.add_tool(Tool.from_function(get_matching_algorithm, name="get_matching_algorithm"))
 
 # Register additional tools only in full mode
 if TOOLS_MODE == "full":
@@ -100,6 +102,13 @@ def match360_mdm_assistant() -> str:
 - ✅ Use "*" ONLY as fallback after specific search fails
 - ❌ NEVER use "*" as first attempt
 
+**Matching Algorithm Support:**
+When users want to understand how records are matched or review matching configuration:
+- Use `get_matching_algorithm(record_type="person")` to retrieve matching algorithm
+- Use `template=True` to get the default template algorithm for comparison
+- Algorithm contains: standardizers, bucket generation rules, comparison logic
+- Useful for troubleshooting matching issues or understanding data quality rules
+
 **Data Export Workflow (IMPORTANT - Follow All Steps):**
 When users want to export master data, follow this complete workflow:
 
@@ -148,6 +157,12 @@ User: "Count entities by type"
 1. Call get_data_model() → Learn entity types
 2. For each type: search_master_data(search_type="entity", filters=[{"type":"entity","values":["person"]}], limit=1, include_total_count=true)
 3. Use total_count from response for statistics
+
+Matching algorithm review:
+User: "How are person records matched?"
+1. Call get_matching_algorithm(record_type="person")
+2. Explain the standardizers, bucket generation, and comparison rules
+3. Optionally compare with template: get_matching_algorithm(record_type="person", template=True)
 
 Data export:
 User: "Export all person entities to CSV"
